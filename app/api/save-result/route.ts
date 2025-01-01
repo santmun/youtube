@@ -1,9 +1,22 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+// Crear el cliente de Supabase para cada petición
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function POST(request: Request) {
   try {
     const { url, transcript, summary } = await request.json()
+
+    if (!url || !transcript || !summary) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
 
     const { data, error } = await supabase
       .from('video_summaries')
