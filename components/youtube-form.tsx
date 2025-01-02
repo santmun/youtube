@@ -35,7 +35,7 @@ export default function YoutubeForm() {
       let transcriptData
       try {
         transcriptData = await transcriptResponse.json()
-      } catch (_) {
+      } catch {
         throw new Error('Error al procesar la respuesta del servidor')
       }
 
@@ -56,7 +56,7 @@ export default function YoutubeForm() {
       let summaryData
       try {
         summaryData = await summaryResponse.json()
-      } catch (_) {
+      } catch {
         throw new Error('Error al procesar la respuesta del servidor')
       }
 
@@ -77,10 +77,12 @@ export default function YoutubeForm() {
   }
 
   const handleSave = async () => {
-    if (!url || !transcript || !summary) return
+    if (!summary) return
+
+    setSaving(true)
+    setError('')
 
     try {
-      setSaving(true)
       const response = await fetch('/api/save-result', {
         method: 'POST',
         headers: {
@@ -89,7 +91,7 @@ export default function YoutubeForm() {
         body: JSON.stringify({
           url,
           transcript,
-          summary,
+          summary
         }),
       })
 
@@ -100,8 +102,11 @@ export default function YoutubeForm() {
       const data = await response.json()
       console.log('Saved:', data)
     } catch (error) {
-      console.error('Error:', error)
-      setError('Error al guardar el resultado')
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError('Error al guardar el resultado')
+      }
     } finally {
       setSaving(false)
     }
