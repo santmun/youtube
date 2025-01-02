@@ -8,10 +8,6 @@ interface Summary {
   topics: string[]
 }
 
-interface Error {
-  message: string;
-}
-
 export default function YoutubeForm() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)

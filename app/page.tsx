@@ -1,7 +1,7 @@
 'use client'
 
-import { YoutubeForm } from '../components/youtube-form'
 import Link from 'next/link'
+import YoutubeForm from '@/components/youtube-form'
 
 export default function Home() {
   return (

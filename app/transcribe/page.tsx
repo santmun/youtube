@@ -1,6 +1,6 @@
 'use client'
 
-import { YoutubeForm } from '@/components/youtube-form'
+import YoutubeForm from '@/components/youtube-form'
 
 export default function TranscribePage() {
   return (
