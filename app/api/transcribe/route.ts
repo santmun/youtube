@@ -29,10 +29,19 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validar formato de URL de YouTube
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/
+    if (!youtubeRegex.test(url)) {
+      return NextResponse.json(
+        { error: 'Por favor, ingresa una URL válida de YouTube' },
+        { status: 400 }
+      )
+    }
+
     const videoId = extractYoutubeId(url)
     if (!videoId) {
       return NextResponse.json(
-        { error: 'Invalid YouTube URL' },
+        { error: 'No se pudo extraer el ID del video' },
         { status: 400 }
       )
     }
@@ -48,13 +57,37 @@ export async function POST(request: Request) {
       }),
     })
 
-    const data = await response.json()
-
     if (!response.ok) {
-      console.error('SUPADATA API error:', data)
+      const errorText = await response.text()
+      console.error('SUPADATA API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      })
+
+      let errorMessage = 'Error al obtener la transcripción'
+      try {
+        const errorData = JSON.parse(errorText)
+        errorMessage = errorData.error || errorMessage
+      } catch {
+        // Si no podemos parsear el error, usamos el mensaje por defecto
+      }
+
       return NextResponse.json(
-        { error: data.error || 'Error al obtener la transcripción' },
+        { error: errorMessage },
         { status: response.status }
+      )
+    }
+
+    const responseText = await response.text()
+    let data
+    try {
+      data = JSON.parse(responseText)
+    } catch (error) {
+      console.error('Error parsing SUPADATA response:', responseText)
+      return NextResponse.json(
+        { error: 'Error al procesar la respuesta del servidor' },
+        { status: 500 }
       )
     }
 

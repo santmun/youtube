@@ -19,23 +19,13 @@ export default function YoutubeForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
     setError('')
     setTranscript('')
     setSummary(null)
 
-    // Validar formato de URL de YouTube
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/
-    if (!youtubeRegex.test(url)) {
-      setError('Por favor, ingresa una URL válida de YouTube')
-      return
-    }
-
     try {
-      setLoading(true)
-      setStep('transcribing')
-
-      // Obtener transcripción
-      const transcribeResponse = await fetch('/api/transcribe', {
+      const transcriptResponse = await fetch('/api/transcribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,46 +33,37 @@ export default function YoutubeForm() {
         body: JSON.stringify({ url }),
       })
 
-      if (!transcribeResponse.ok) {
-        const errorData = await transcribeResponse.json()
-        throw new Error(errorData.error || 'Error al obtener la transcripción')
+      const transcriptData = await transcriptResponse.json()
+
+      if (!transcriptResponse.ok) {
+        throw new Error(transcriptData.error || 'Error al obtener la transcripción')
       }
 
-      const transcribeData = await transcribeResponse.json()
-      
-      if (!transcribeData.transcript) {
-        throw new Error('No se pudo obtener la transcripción del video')
-      }
+      setTranscript(transcriptData.transcript)
 
-      setTranscript(transcribeData.transcript)
-      setStep('summarizing')
-
-      // Generar resumen
       const summaryResponse = await fetch('/api/summarize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ transcript: transcribeData.transcript }),
+        body: JSON.stringify({ transcript: transcriptData.transcript }),
       })
 
+      const summaryData = await summaryResponse.json()
+
       if (!summaryResponse.ok) {
-        const errorData = await summaryResponse.json()
-        throw new Error(errorData.error || 'Error al generar el resumen')
+        throw new Error(summaryData.error || 'Error al generar el resumen')
       }
 
-      const summaryData = await summaryResponse.json()
       setSummary(summaryData)
-    } catch (error: unknown) {
-      console.error('Error:', error)
+    } catch (error) {
       if (error instanceof Error) {
         setError(error.message)
       } else {
-        setError('Ocurrió un error al procesar el video')
+        setError('Ocurrió un error inesperado')
       }
     } finally {
       setLoading(false)
-      setStep('idle')
     }
   }
 
