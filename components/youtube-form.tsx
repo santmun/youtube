@@ -14,7 +14,6 @@ export default function YoutubeForm() {
   const [error, setError] = useState('')
   const [transcript, setTranscript] = useState('')
   const [summary, setSummary] = useState<Summary | null>(null)
-  const [step, setStep] = useState<'idle' | 'transcribing' | 'summarizing'>('idle')
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,7 +123,7 @@ export default function YoutubeForm() {
             {loading ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin" />
-                {step === 'transcribing' ? 'Transcribiendo...' : 'Generando...'}
+                Procesando...
               </div>
             ) : (
               'Procesar'

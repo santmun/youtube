@@ -29,11 +29,25 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "system",
-            content: "Eres un asistente experto en resumir y analizar contenido. Genera resúmenes concisos y estructurados."
+            content: `Eres un asistente experto en resumir y analizar contenido. 
+            Genera resúmenes concisos y estructurados en formato JSON siguiendo esta estructura:
+            {
+              "summary": "Resumen general del contenido",
+              "keyPoints": [
+                "Punto clave 1",
+                "Punto clave 2",
+                ...
+              ],
+              "topics": [
+                "Tema 1",
+                "Tema 2",
+                ...
+              ]
+            }`
           },
           {
             role: "user",
-            content: `Por favor, analiza esta transcripción y genera un resumen estructurado con los siguientes elementos:
+            content: `Analiza esta transcripción y genera un resumen estructurado con:
               1. Un resumen general conciso
               2. Los puntos clave más importantes (máximo 5)
               3. Los temas principales mencionados (máximo 3)
@@ -42,7 +56,10 @@ export async function POST(request: Request) {
           }
         ],
         temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 1000,
+        response_format: {
+          type: 'json_object'
+        }
       }),
     })
 
@@ -62,19 +79,10 @@ export async function POST(request: Request) {
       return NextResponse.json(parsedContent)
     } catch (parseError) {
       console.error('Error parsing Deepseek response:', parseError)
-      
-      // Si no podemos parsear la respuesta como JSON, intentamos estructurarla
-      const content = data.choices[0].message.content
-      const keyPointMatches = content.match(/(?<=•|\*)\s*([^\n]+)/g) || []
-      const topicMatches = content.match(/(?<=Temas:|Topics:)\s*([^\n]+)/g)?.[0]?.split(',') || []
-      
-      const summary: Summary = {
-        summary: content.split('\n\n')[0] || '',
-        keyPoints: keyPointMatches.map((point: string) => point.trim()),
-        topics: topicMatches.map((topic: string) => topic.trim())
-      }
-      
-      return NextResponse.json(summary)
+      return NextResponse.json(
+        { error: 'Error al procesar la respuesta del servidor' },
+        { status: 500 }
+      )
     }
   } catch (error) {
     console.error('Summary error:', error)

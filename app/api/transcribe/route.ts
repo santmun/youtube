@@ -69,8 +69,9 @@ export async function POST(request: Request) {
       try {
         const errorData = JSON.parse(errorText)
         errorMessage = errorData.error || errorMessage
-      } catch {
+      } catch (parseError) {
         // Si no podemos parsear el error, usamos el mensaje por defecto
+        console.error('Error parsing error response:', parseError)
       }
 
       return NextResponse.json(
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
     let data
     try {
       data = JSON.parse(responseText)
-    } catch (error) {
+    } catch (parseError) {
       console.error('Error parsing SUPADATA response:', responseText)
       return NextResponse.json(
         { error: 'Error al procesar la respuesta del servidor' },
