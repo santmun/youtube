@@ -49,7 +49,7 @@ export async function POST(request: Request) {
           }
         ],
         temperature: 0.3,
-        max_tokens: 1000,
+        max_tokens: 4000,
         response_format: {
           type: 'json_object'
         }
@@ -66,8 +66,8 @@ export async function POST(request: Request) {
       )
     }
 
+    const content = data.choices[0].message.content
     try {
-      const content = data.choices[0].message.content
       // Asegurarnos de que no hay caracteres extra antes o después del JSON
       const jsonStr = content.trim()
       const parsedContent = JSON.parse(jsonStr) as Summary
