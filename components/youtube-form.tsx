@@ -5,10 +5,6 @@ import { useState } from 'react'
 interface Summary {
   summary: string
   keyPoints: string[]
-  sections: Array<{
-    title: string
-    content: string
-  }>
   topics: string[]
 }
 
@@ -83,7 +79,11 @@ export default function YoutubeForm() {
       setSummary(summaryData)
     } catch (error: unknown) {
       console.error('Error:', error)
-      setError(error instanceof Error ? error.message : 'Ocurrió un error al procesar el video')
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError('Ocurrió un error al procesar el video')
+      }
     } finally {
       setLoading(false)
       setStep('idle')
@@ -108,14 +108,11 @@ export default function YoutubeForm() {
       })
 
       if (!response.ok) {
-        throw new Error('Error saving result')
+        throw new Error('Error al guardar el resultado')
       }
 
       const data = await response.json()
-      if (data.success) {
-        // Redirigir a la página de resultados guardados
-        window.location.href = '/saved'
-      }
+      console.log('Saved:', data)
     } catch (error) {
       console.error('Error:', error)
       setError('Error al guardar el resultado')
