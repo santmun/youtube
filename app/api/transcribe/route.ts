@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ transcript: data.content })
     } catch (fetchError) {
       clearTimeout(timeoutId)
-      if (fetchError.name === 'AbortError') {
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         return NextResponse.json(
           { error: 'La solicitud tomó demasiado tiempo. Por favor, intenta de nuevo.' },
           { status: 504 }
