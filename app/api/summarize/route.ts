@@ -1,41 +1,9 @@
 import { NextResponse } from 'next/server'
 
-const systemPrompt = `
-You are an expert at analyzing video transcripts and providing comprehensive summaries.
-Given a transcript from a YouTube video, create a detailed analysis with the following structure:
-
-1. A concise main summary of the video content
-2. Key points discussed in the video
-3. Important timestamps or sections
-4. Relevant topics or tags
-
-Please output the analysis in JSON format following this structure:
-
-{
-  "summary": "Brief overview of the main content",
-  "keyPoints": [
-    "Point 1",
-    "Point 2",
-    ...
-  ],
-  "sections": [
-    {
-      "title": "Section title",
-      "content": "Section content summary"
-    },
-    ...
-  ],
-  "topics": [
-    "Topic 1",
-    "Topic 2",
-    ...
-  ]
-}
-`
-
 export async function POST(request: Request) {
   try {
-    const { transcript } = await request.json()
+    const body = await request.json()
+    const { transcript } = body
 
     if (!transcript) {
       return NextResponse.json(
@@ -44,52 +12,65 @@ export async function POST(request: Request) {
       )
     }
 
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: "deepseek-chat",
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: transcript }
+          {
+            role: "system",
+            content: "Eres un asistente experto en resumir y analizar contenido. Genera resúmenes concisos y estructurados."
+          },
+          {
+            role: "user",
+            content: `Por favor, analiza esta transcripción y genera un resumen estructurado con los siguientes elementos:
+              1. Un resumen general conciso
+              2. Los puntos clave más importantes (máximo 5)
+              3. Los temas principales mencionados (máximo 3)
+              
+              Transcripción: ${transcript}`
+          }
         ],
-        stream: false,
-        response_format: {
-          type: 'json_object'
-        }
-      })
+        temperature: 0.7,
+        max_tokens: 1000
+      }),
     })
 
+    const data = await response.json()
+
     if (!response.ok) {
-      const error = await response.json()
-      console.error('Deepseek API error:', error)
+      console.error('Deepseek API error:', data)
       return NextResponse.json(
-        { error: 'Error generating summary' },
+        { error: data.error?.message || 'Error al generar el resumen' },
         { status: response.status }
       )
     }
 
-    const data = await response.json()
-    const summary = data.choices[0].message.content
-
     try {
-      // Asegurarse de que el contenido sea un JSON válido
-      const parsedSummary = JSON.parse(summary)
-      return NextResponse.json(parsedSummary)
+      const content = data.choices[0].message.content
+      const parsedContent = JSON.parse(content)
+      return NextResponse.json(parsedContent)
     } catch (parseError) {
-      console.error('Error parsing summary JSON:', parseError)
-      return NextResponse.json(
-        { error: 'Error parsing summary response' },
-        { status: 500 }
-      )
+      console.error('Error parsing Deepseek response:', parseError)
+      
+      // Si no podemos parsear la respuesta como JSON, intentamos estructurarla
+      const content = data.choices[0].message.content
+      const summary = {
+        summary: content.split('\n\n')[0] || '',
+        keyPoints: content.match(/(?<=•|\*)\s*([^\n]+)/g)?.map(point => point.trim()) || [],
+        topics: content.match(/(?<=Temas:|Topics:)\s*([^\n]+)/g)?.[0]?.split(',').map(topic => topic.trim()) || []
+      }
+      
+      return NextResponse.json(summary)
     }
   } catch (error) {
     console.error('Summary error:', error)
     return NextResponse.json(
-      { error: 'Error generating summary' },
+      { error: 'Error al generar el resumen' },
       { status: 500 }
     )
   }

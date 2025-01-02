@@ -19,7 +19,8 @@ function extractYoutubeId(url: string): string | null {
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json()
+    const body = await request.json()
+    const { url } = body
 
     if (!url) {
       return NextResponse.json(
@@ -47,25 +48,16 @@ export async function POST(request: Request) {
       }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      console.error('SUPADATA API error:', error)
-      
-      if (response.status === 404) {
-        return NextResponse.json(
-          { error: 'No se encontró transcripción para este video' },
-          { status: 404 }
-        )
-      }
+    const data = await response.json()
 
+    if (!response.ok) {
+      console.error('SUPADATA API error:', data)
       return NextResponse.json(
-        { error: 'Error al obtener la transcripción' },
+        { error: data.error || 'Error al obtener la transcripción' },
         { status: response.status }
       )
     }
 
-    const data = await response.json()
-    
     if (!data.transcript) {
       return NextResponse.json(
         { error: 'No se pudo obtener la transcripción' },
