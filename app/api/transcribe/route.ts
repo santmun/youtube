@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
-  if (!process.env.SUPADATA_API_KEY) {
-    console.error('SUPADATA_API_KEY is not defined')
-    return NextResponse.json(
-      { error: 'API key configuration error' },
-      { status: 500 }
-    )
+// Función para extraer el ID del video de YouTube
+function extractYoutubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /^[a-zA-Z0-9_-]{11}$/
+  ]
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match && match[1]) {
+      return match[1]
+    }
   }
 
+  return null
+}
+
+export async function POST(request: Request) {
   try {
     const { url } = await request.json()
 
@@ -19,41 +28,56 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log('Processing URL:', url)
-    console.log('Using API Key:', process.env.SUPADATA_API_KEY.slice(0, 10) + '...')
+    const videoId = extractYoutubeId(url)
+    if (!videoId) {
+      return NextResponse.json(
+        { error: 'Invalid YouTube URL' },
+        { status: 400 }
+      )
+    }
 
-    const apiUrl = new URL('https://api.supadata.ai/v1/youtube/transcript')
-    apiUrl.searchParams.append('url', url)
-    apiUrl.searchParams.append('text', 'true')
-
-    console.log('Requesting:', apiUrl.toString())
-
-    const response = await fetch(apiUrl.toString(), {
-      method: 'GET',
+    const response = await fetch('https://api.supada.com/youtube/transcript', {
+      method: 'POST',
       headers: {
-        'x-api-key': process.env.SUPADATA_API_KEY,
-        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPADATA_API_KEY}`,
       },
+      body: JSON.stringify({
+        video_id: videoId,
+      }),
     })
 
-    console.log('Response status:', response.status)
-
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
-      console.error('API Error:', errorData)
+      const error = await response.json()
+      console.error('SUPADATA API error:', error)
+      
+      if (response.status === 404) {
+        return NextResponse.json(
+          { error: 'No se encontró transcripción para este video' },
+          { status: 404 }
+        )
+      }
+
       return NextResponse.json(
-        { error: errorData.message || 'Failed to transcribe video' },
+        { error: 'Error al obtener la transcripción' },
         { status: response.status }
       )
     }
 
     const data = await response.json()
-    console.log('Success! Received data:', typeof data)
-    return NextResponse.json(data)
+    
+    if (!data.transcript) {
+      return NextResponse.json(
+        { error: 'No se pudo obtener la transcripción' },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ transcript: data.transcript })
   } catch (error) {
     console.error('Transcription error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { error: 'Error al procesar la transcripción' },
       { status: 500 }
     )
   }
