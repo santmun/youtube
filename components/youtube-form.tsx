@@ -32,7 +32,12 @@ export default function YoutubeForm() {
         body: JSON.stringify({ url }),
       })
 
-      const transcriptData = await transcriptResponse.json()
+      let transcriptData
+      try {
+        transcriptData = await transcriptResponse.json()
+      } catch (error) {
+        throw new Error('Error al procesar la respuesta del servidor')
+      }
 
       if (!transcriptResponse.ok) {
         throw new Error(transcriptData.error || 'Error al obtener la transcripción')
@@ -48,7 +53,12 @@ export default function YoutubeForm() {
         body: JSON.stringify({ transcript: transcriptData.transcript }),
       })
 
-      const summaryData = await summaryResponse.json()
+      let summaryData
+      try {
+        summaryData = await summaryResponse.json()
+      } catch (error) {
+        throw new Error('Error al procesar la respuesta del servidor')
+      }
 
       if (!summaryResponse.ok) {
         throw new Error(summaryData.error || 'Error al generar el resumen')

@@ -57,8 +57,14 @@ export async function POST(request: Request) {
       }),
     })
 
+    let errorText = ''
+    try {
+      errorText = await response.text()
+    } catch {
+      errorText = 'Error desconocido'
+    }
+
     if (!response.ok) {
-      const errorText = await response.text()
       console.error('SUPADATA API error:', {
         status: response.status,
         statusText: response.statusText,
@@ -71,7 +77,7 @@ export async function POST(request: Request) {
         errorMessage = errorData.error || errorMessage
       } catch {
         // Si no podemos parsear el error, usamos el mensaje por defecto
-        console.error('Error parsing error response:')
+        console.error('Error parsing error response')
       }
 
       return NextResponse.json(
@@ -80,12 +86,11 @@ export async function POST(request: Request) {
       )
     }
 
-    const responseText = await response.text()
     let data
     try {
-      data = JSON.parse(responseText)
+      data = JSON.parse(errorText)
     } catch {
-      console.error('Error parsing SUPADATA response:', responseText)
+      console.error('Error parsing SUPADATA response:', errorText)
       return NextResponse.json(
         { error: 'Error al procesar la respuesta del servidor' },
         { status: 500 }
