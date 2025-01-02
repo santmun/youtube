@@ -46,65 +46,78 @@ export async function POST(request: Request) {
       )
     }
 
-    const response = await fetch('https://api.supada.com/youtube/transcript', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPADATA_API_KEY}`,
-      },
-      body: JSON.stringify({
-        video_id: videoId,
-      }),
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos de timeout
 
-    let errorText = ''
     try {
-      errorText = await response.text()
-    } catch {
-      errorText = 'Error desconocido'
-    }
-
-    if (!response.ok) {
-      console.error('SUPADATA API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
+      const response = await fetch(`https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(url)}&text=true`, {
+        method: 'GET',
+        headers: {
+          'x-api-key': `${process.env.SUPADATA_API_KEY}`,
+        },
+        signal: controller.signal
       })
 
-      let errorMessage = 'Error al obtener la transcripción'
+      clearTimeout(timeoutId)
+
+      let errorText = ''
       try {
-        const errorData = JSON.parse(errorText)
-        errorMessage = errorData.error || errorMessage
+        errorText = await response.text()
       } catch {
-        // Si no podemos parsear el error, usamos el mensaje por defecto
-        console.error('Error parsing error response')
+        errorText = 'Error desconocido'
       }
 
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: response.status }
-      )
-    }
+      if (!response.ok) {
+        console.error('SUPADATA API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        })
 
-    let data
-    try {
-      data = JSON.parse(errorText)
-    } catch {
-      console.error('Error parsing SUPADATA response:', errorText)
-      return NextResponse.json(
-        { error: 'Error al procesar la respuesta del servidor' },
-        { status: 500 }
-      )
-    }
+        let errorMessage = 'Error al obtener la transcripción'
+        try {
+          const errorData = JSON.parse(errorText)
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // Si no podemos parsear el error, usamos el mensaje por defecto
+          console.error('Error parsing error response')
+        }
 
-    if (!data.transcript) {
-      return NextResponse.json(
-        { error: 'No se pudo obtener la transcripción' },
-        { status: 400 }
-      )
-    }
+        return NextResponse.json(
+          { error: errorMessage },
+          { status: response.status }
+        )
+      }
 
-    return NextResponse.json({ transcript: data.transcript })
+      let data
+      try {
+        data = JSON.parse(errorText)
+      } catch {
+        console.error('Error parsing SUPADATA response:', errorText)
+        return NextResponse.json(
+          { error: 'Error al procesar la respuesta del servidor' },
+          { status: 500 }
+        )
+      }
+
+      if (!data.content) {
+        return NextResponse.json(
+          { error: 'No se pudo obtener la transcripción' },
+          { status: 400 }
+        )
+      }
+
+      return NextResponse.json({ transcript: data.content })
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      if (fetchError.name === 'AbortError') {
+        return NextResponse.json(
+          { error: 'La solicitud tomó demasiado tiempo. Por favor, intenta de nuevo.' },
+          { status: 504 }
+        )
+      }
+      throw fetchError
+    }
   } catch (error) {
     console.error('Transcription error:', error)
     return NextResponse.json(
