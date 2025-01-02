@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
 
+interface Summary {
+  summary: string
+  keyPoints: string[]
+  topics: string[]
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -52,17 +58,20 @@ export async function POST(request: Request) {
 
     try {
       const content = data.choices[0].message.content
-      const parsedContent = JSON.parse(content)
+      const parsedContent = JSON.parse(content) as Summary
       return NextResponse.json(parsedContent)
     } catch (parseError) {
       console.error('Error parsing Deepseek response:', parseError)
       
       // Si no podemos parsear la respuesta como JSON, intentamos estructurarla
       const content = data.choices[0].message.content
-      const summary = {
+      const keyPointMatches = content.match(/(?<=•|\*)\s*([^\n]+)/g) || []
+      const topicMatches = content.match(/(?<=Temas:|Topics:)\s*([^\n]+)/g)?.[0]?.split(',') || []
+      
+      const summary: Summary = {
         summary: content.split('\n\n')[0] || '',
-        keyPoints: content.match(/(?<=•|\*)\s*([^\n]+)/g)?.map(point => point.trim()) || [],
-        topics: content.match(/(?<=Temas:|Topics:)\s*([^\n]+)/g)?.[0]?.split(',').map(topic => topic.trim()) || []
+        keyPoints: keyPointMatches.map((point: string) => point.trim()),
+        topics: topicMatches.map((topic: string) => topic.trim())
       }
       
       return NextResponse.json(summary)
