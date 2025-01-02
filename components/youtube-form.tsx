@@ -12,7 +12,11 @@ interface Summary {
   topics: string[]
 }
 
-export function YoutubeForm() {
+interface Error {
+  message: string;
+}
+
+export default function YoutubeForm() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -77,9 +81,9 @@ export function YoutubeForm() {
 
       const summaryData = await summaryResponse.json()
       setSummary(summaryData)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error:', error)
-      setError(error.message || 'Ocurrió un error al procesar el video')
+      setError(error instanceof Error ? error.message : 'Ocurrió un error al procesar el video')
     } finally {
       setLoading(false)
       setStep('idle')
