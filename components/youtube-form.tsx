@@ -35,7 +35,7 @@ export default function YoutubeForm() {
       let transcriptData
       try {
         transcriptData = await transcriptResponse.json()
-      } catch (error) {
+      } catch (_) {
         throw new Error('Error al procesar la respuesta del servidor')
       }
 
@@ -56,7 +56,7 @@ export default function YoutubeForm() {
       let summaryData
       try {
         summaryData = await summaryResponse.json()
-      } catch (error) {
+      } catch (_) {
         throw new Error('Error al procesar la respuesta del servidor')
       }
 
